@@ -3,51 +3,61 @@
 #include <unordered_map>
 #include <iostream>
 
-// Function to evaluate JSON path
 std::string evaluateJSONPath(JsonPack& jsonPack, const std::string& path) {
     size_t pos = 0;
     JsonPack* currentPack = &jsonPack;
-    std::string token;
-    while ((pos = path.find('.')) != std::string::npos || (pos = path.find('[')) != std::string::npos) {
-        token = path.substr(0, pos);
+    std::string currentPath = path;
+    
+    while (true) {
+        pos = currentPath.find_first_of(".[");
+        std::string token = currentPath.substr(0, pos);
+
         if (currentPack->ReadObject()) {
+            bool found = false;
             while (currentPack->ReadMember()) {
                 if (std::string(currentPack->Key(), currentPack->KeyLength()) == token) {
-                    currentPack = currentPack;  // Proceed to the next nested object
+                    found = true;
                     break;
                 }
             }
+            if (!found) return ""; // Path not found
         }
-        path.erase(0, pos + 1);
-    }
 
-    token = path;
-    if (currentPack->ReadObject()) {
-        while (currentPack->ReadMember()) {
-            if (std::string(currentPack->Key(), currentPack->KeyLength()) == token) {
-                switch (currentPack->ValueType()) {
-                    case JSON_STRING:
-                        return std::string(currentPack->Value(), currentPack->ValueLength());
-                    case JSON_INTEGER:
-                        return std::to_string(currentPack->Quantity());
-                    case JSON_DECIMAL:
-                        return std::to_string(currentPack->Number());
-                    case JSON_BOOLEAN:
-                        return currentPack->Flag() ? "true" : "false";
-                    case JSON_NULL:
-                        return "null";
-                    case JSON_ARRAY:
-                    case JSON_OBJECT:
-                        // Handle arrays and objects as needed
-                        break;
-                    default:
-                        return "";
+        if (pos == std::string::npos) break; // End of path
+        currentPath = currentPath.substr(pos);
+
+        if (currentPath[0] == '[') {
+            size_t endPos = currentPath.find(']');
+            if (endPos == std::string::npos) return ""; // Malformed path
+            int index = std::stoi(currentPath.substr(1, endPos - 1));
+            if (currentPack->ValueType() == JSON_ARRAY) {
+                for (int i = 0; i <= index; ++i) {
+                    currentPack->ReadValue();
+                    if (i < index) currentPack->ReadValue();
                 }
             }
+            currentPath = currentPath.substr(endPos + 1);
+        } else {
+            currentPath = currentPath.substr(1);
         }
     }
-    return "";
+
+    switch (currentPack->ValueType()) {
+        case JSON_STRING:
+            return std::string(currentPack->Value(), currentPack->ValueLength());
+        case JSON_INTEGER:
+            return std::to_string(currentPack->Quantity());
+        case JSON_DECIMAL:
+            return std::to_string(currentPack->Number());
+        case JSON_BOOLEAN:
+            return currentPack->Flag() ? "true" : "false";
+        case JSON_NULL:
+            return "null";
+        default:
+            return "";
+    }
 }
+
 
 // Function to parse the transformation JSON
 std::unordered_map<std::string, std::string> parseTransformationJson(char* transformationData, int len) {

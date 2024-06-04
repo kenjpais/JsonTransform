@@ -3,15 +3,34 @@
 #include <unordered_map>
 #include <iostream>
 
-std::string evaluateJSONPath(JsonPack& jsonPack, const std::string& path) {
-    size_t pos = 0;
-    JsonPack* currentPack = &jsonPack;
-    std::string currentPath = path;
-    
-    while (true) {
-        pos = currentPath.find_first_of(".[");
-        std::string token = currentPath.substr(0, pos);
+// Split a string by a delimiter
+std::vector<std::string> split(const std::string& s, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
 
+// Function to evaluate JSON path
+std::string evaluateJSONPath(JsonPack& jsonPack, const std::string& path) {
+    std::vector<std::string> tokens = split(path, '.');
+    JsonPack* currentPack = &jsonPack;
+
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        std::string token = tokens[i];
+        size_t arrayIndexPos = token.find('[');
+        size_t arrayIndex = std::string::npos;
+        
+        // Check if the token includes an array index
+        if (arrayIndexPos != std::string::npos) {
+            arrayIndex = std::stoi(token.substr(arrayIndexPos + 1, token.find(']') - arrayIndexPos - 1));
+            token = token.substr(0, arrayIndexPos);
+        }
+
+        // Traverse the object to find the token
         if (currentPack->ReadObject()) {
             bool found = false;
             while (currentPack->ReadMember()) {
@@ -23,25 +42,18 @@ std::string evaluateJSONPath(JsonPack& jsonPack, const std::string& path) {
             if (!found) return ""; // Path not found
         }
 
-        if (pos == std::string::npos) break; // End of path
-        currentPath = currentPath.substr(pos);
-
-        if (currentPath[0] == '[') {
-            size_t endPos = currentPath.find(']');
-            if (endPos == std::string::npos) return ""; // Malformed path
-            int index = std::stoi(currentPath.substr(1, endPos - 1));
+        // If array index exists, traverse the array
+        if (arrayIndex != std::string::npos) {
             if (currentPack->ValueType() == JSON_ARRAY) {
-                for (int i = 0; i <= index; ++i) {
-                    currentPack->ReadValue();
-                    if (i < index) currentPack->ReadValue();
+                for (size_t j = 0; j <= arrayIndex; ++j) {
+                    if (!currentPack->ReadValue()) return ""; // Array index out of bounds
+                    if (j < arrayIndex) currentPack->ReadValue();
                 }
             }
-            currentPath = currentPath.substr(endPos + 1);
-        } else {
-            currentPath = currentPath.substr(1);
         }
     }
 
+    // Extract the value based on its type
     switch (currentPack->ValueType()) {
         case JSON_STRING:
             return std::string(currentPack->Value(), currentPack->ValueLength());
@@ -57,8 +69,6 @@ std::string evaluateJSONPath(JsonPack& jsonPack, const std::string& path) {
             return "";
     }
 }
-
-
 // Function to parse the transformation JSON
 std::unordered_map<std::string, std::string> parseTransformationJson(char* transformationData, int len) {
     JsonPack transPack(transformationData, len);

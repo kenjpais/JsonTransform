@@ -3,6 +3,41 @@
 #include <unordered_map>
 #include <iostream>
 
+JSONValue extractValue(const JSONValue& data, const std::string& path) {
+    const JSONValue* current = &data;
+    std::istringstream ss(path);
+    std::string token;
+
+    while (std::getline(ss, token, '.')) {
+        // Check if the token has array indexing
+        if (token.find('[') != std::string::npos) {
+            try {
+                auto [key, index] = parseArrayToken(token);
+                // Ensure current is an object and contains the key
+                if (!current->isObject() || current->getObject().find(key) == current->getObject().end()) {
+                    throw std::runtime_error("Invalid path: key not found");
+                }
+                // Ensure the key maps to an array and the index is valid
+                const JSONValue& arrayValue = current->getObject().at(key);
+                if (!arrayValue.isArray() || index >= arrayValue.getArray().size()) {
+                    throw std::runtime_error("Invalid path: array index out of bounds");
+                }
+                current = &arrayValue.getArray().at(index);
+            } catch (const std::exception& e) {
+                throw std::runtime_error("Error parsing array token: " + std::string(e.what()));
+            }
+        } else {
+            // Ensure current is an object and contains the key
+            if (!current->isObject() || current->getObject().find(token) == current->getObject().end()) {
+                throw std::runtime_error("Invalid path: key not found");
+            }
+            current = &current->getObject().at(token);
+        }
+    }
+
+    return *current;
+}
+
 // Split a string by a delimiter
 std::vector<std::string> split(const std::string& s, char delimiter) {
     std::vector<std::string> tokens;

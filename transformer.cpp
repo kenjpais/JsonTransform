@@ -3,6 +3,17 @@
 #include <unordered_map>
 #include <iostream>
 
+std::pair<std::string, size_t> parseArrayToken(const std::string& token) {
+    size_t startPos = token.find('[');
+    size_t endPos = token.find(']');
+    if (startPos == std::string::npos || endPos == std::string::npos || endPos <= startPos + 1) {
+        throw std::runtime_error("Invalid array token: " + token);
+    }
+    std::string key = token.substr(0, startPos);
+    size_t index = std::stoi(token.substr(startPos + 1, endPos - startPos - 1));
+    return {key, index};
+}
+
 JSONValue extractValue(const JSONValue& data, const std::string& path) {
     const JSONValue* current = &data;
     std::istringstream ss(path);

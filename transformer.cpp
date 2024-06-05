@@ -2,7 +2,26 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
-
+JSONValue resolveExpression(const JSONValue& input, const std::string& expression) {
+        static std::regex regex("\\$\\{([^}]*)\\}");
+        std::smatch match;
+        std::string expr = expression;
+        while (std::regex_search(expr, match, regex)) {
+            std::string placeholder = match[0];
+            std::string path = match[1];
+            JSONValue result = resolvePath(input, path);
+            std::string value;
+            if (std::holds_alternative<std::string>(result.value)) {
+                value = std::get<std::string>(result.value);
+            } else {
+                std::ostringstream oss;
+                oss << result;
+                value = oss.str();
+            }
+            expr.replace(match.position(), placeholder.length(), value);
+        }
+        return expr;
+    }
 JSONValue extractValue(const JSONValue& data, const std::string& path) {
     const JSONValue* current = &data;
     size_t start = 0;

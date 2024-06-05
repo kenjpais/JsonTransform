@@ -2,6 +2,29 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
+JSONValue resolveExpression(const JSONValue& input, const std::string& expression) {
+    std::string result = expression;
+    size_t pos = 0;
+    while ((pos = result.find("${", pos)) != std::string::npos) {
+        size_t endPos = result.find('}', pos);
+        if (endPos == std::string::npos) {
+            // Invalid placeholder, continue searching from the next character
+            ++pos;
+            continue;
+        }
+        std::string placeholder = result.substr(pos + 2, endPos - pos - 2);
+        JSONValue placeholderValue = resolvePath(input, placeholder);
+        std::string replacement;
+        if (std::holds_alternative<std::string>(placeholderValue.value)) {
+            replacement = std::get<std::string>(placeholderValue.value);
+        } else {
+            replacement = std::to_string(placeholderValue);
+        }
+        result.replace(pos, endPos - pos + 1, replacement);
+        pos += replacement.length(); // Move to the next position after the replacement
+    }
+    return JSONValue(result);
+}
 
 JSONValue resolveExpression(const JSONValue& input, const std::string& expression) {
     try {

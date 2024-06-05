@@ -3,6 +3,43 @@
 #include <unordered_map>
 #include <iostream>
 
+JSONValue extractValue(const JSONValue& data, const std::string& path) {
+    const JSONValue* current = &data;
+    size_t start = 0;
+    size_t end = 0;
+
+    while (start < path.length()) {
+        end = path.find_first_of(".[", start);
+
+        std::string key = (end == std::string::npos) ? path.substr(start) : path.substr(start, end - start);
+
+        if (!key.empty()) {
+            if (!current->isObject() || current->getObject().find(key) == current->getObject().end()) {
+                throw std::runtime_error("Invalid path: key '" + key + "' not found");
+            }
+            current = &current->getObject().at(key);
+        }
+
+        if (end != std::string::npos && path[end] == '[') {
+            start = end + 1;
+            end = path.find(']', start);
+            if (end == std::string::npos) {
+                throw std::runtime_error("Invalid path: unmatched '['");
+            }
+            size_t index = std::stoi(path.substr(start, end - start));
+            start = end + 1;
+
+            if (!current->isArray() || index >= current->getArray().size()) {
+                throw std::runtime_error("Invalid path: array index out of bounds");
+            }
+            current = &current->getArray().at(index);
+        } else {
+            start = (end == std::string::npos) ? path.length() : end + 1;
+        }
+    }
+
+    return *current;
+}
 std::pair<std::string, size_t> parseArrayToken(const std::string& token) {
     size_t startPos = token.find('[');
     size_t endPos = token.find(']');

@@ -2,6 +2,36 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
+
+JSONValue resolveExpression(const JSONValue& input, const std::string& expression) {
+    try {
+        std::regex placeholderRegex("\\$\\{([^}]*)\\}");
+        std::string result = expression;
+        std::smatch match;
+        while (std::regex_search(result, match, placeholderRegex)) {
+            if (match.size() != 2) {
+                throw std::runtime_error("Invalid placeholder match");
+            }
+            std::string placeholder = match[1];
+            JSONValue placeholderValue = resolvePath(input, placeholder);
+            std::string replacement;
+            if (std::holds_alternative<std::string>(placeholderValue.value)) {
+                replacement = std::get<std::string>(placeholderValue.value);
+            } else {
+                replacement = std::to_string(placeholderValue);
+            }
+            result.replace(match.position(), match.length(), replacement);
+        }
+        return result;
+    } catch (const std::regex_error& e) {
+        std::cerr << "Regex error: " << e.what() << std::endl;
+        return expression; // Return the original expression in case of regex error
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return expression; // Return the original expression in case of other errors
+    }
+}
+
 JSONValue resolveExpression(const JSONValue& input, const std::string& expression) {
         static std::regex regex("\\$\\{([^}]*)\\}");
         std::smatch match;

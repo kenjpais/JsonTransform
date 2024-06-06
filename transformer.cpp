@@ -1,4 +1,191 @@
-/**/
+/*#include <functional>
+#include <unordered_map>
+#include <string>
+
+class ThirdPartyService {
+public:
+    using ServiceFunction = std::function<std::string(const std::string&)>;
+    virtual ~ThirdPartyService() = default;
+    
+    std::unordered_map<std::string, ServiceFunction> functionMap;
+
+    virtual std::string execute(const std::string& functionName, const std::string& request) {
+        if (functionMap.find(functionName) != functionMap.end()) {
+            return functionMap[functionName](request);
+        }
+        return "Function not found";
+    }
+};
+2. Implement Adapters for Each Third-Party Application
+OEPY Adapter
+cpp
+Copy code
+struct OeMsg {
+    std::string data;
+};
+
+class OeService {
+public:
+    std::string create(const OeMsg& oeMsg) {
+        return "OEPY created: " + oeMsg.data;
+    }
+
+    std::string read(const OeMsg& oeMsg) {
+        return "OEPY read: " + oeMsg.data;
+    }
+
+    // New function
+    std::string newFunction(const OeMsg& oeMsg) {
+        return "OEPY new function: " + oeMsg.data;
+    }
+};
+
+class OeServiceAdapter : public ThirdPartyService {
+private:
+    OeService oeService;
+
+    OeMsg convertToOeMsg(const std::string& request) {
+        return { request };
+    }
+
+public:
+    OeServiceAdapter() {
+        functionMap["create"] = [this](const std::string& request) {
+            return this->create(request);
+        };
+        functionMap["read"] = [this](const std::string& request) {
+            return this->read(request);
+        };
+        functionMap["newFunction"] = [this](const std::string& request) {
+            return this->newFunction(request);
+        };
+    }
+
+    std::string create(const std::string& request) {
+        OeMsg oeMsg = convertToOeMsg(request);
+        return oeService.create(oeMsg);
+    }
+
+    std::string read(const std::string& request) {
+        OeMsg oeMsg = convertToOeMsg(request);
+        return oeService.read(oeMsg);
+    }
+
+    // New function
+    std::string newFunction(const std::string& request) {
+        OeMsg oeMsg = convertToOeMsg(request);
+        return oeService.newFunction(oeMsg);
+    }
+};
+XYZ Adapter
+cpp
+Copy code
+struct XyzMsg {
+    std::string data;
+};
+
+class XyzService {
+public:
+    std::string create(const XyzMsg& xyzMsg) {
+        return "XYZ created: " + xyzMsg.data;
+    }
+
+    std::string read(const XyzMsg& xyzMsg) {
+        return "XYZ read: " + xyzMsg.data;
+    }
+
+    // New function
+    std::string newFunction(const XyzMsg& xyzMsg) {
+        return "XYZ new function: " + xyzMsg.data;
+    }
+};
+
+class XyzServiceAdapter : public ThirdPartyService {
+private:
+    XyzService xyzService;
+
+    XyzMsg convertToXyzMsg(const std::string& request) {
+        return { request };
+    }
+
+public:
+    XyzServiceAdapter() {
+        functionMap["create"] = [this](const std::string& request) {
+            return this->create(request);
+        };
+        functionMap["read"] = [this](const std::string& request) {
+            return this->read(request);
+        };
+        functionMap["newFunction"] = [this](const std::string& request) {
+            return this->newFunction(request);
+        };
+    }
+
+    std::string create(const std::string& request) {
+        XyzMsg xyzMsg = convertToXyzMsg(request);
+        return xyzService.create(xyzMsg);
+    }
+
+    std::string read(const std::string& request) {
+        XyzMsg xyzMsg = convertToXyzMsg(request);
+        return xyzService.read(xyzMsg);
+    }
+
+    // New function
+    std::string newFunction(const std::string& request) {
+        XyzMsg xyzMsg = convertToXyzMsg(request);
+        return xyzService.newFunction(xyzMsg);
+    }
+};
+3. Factory to Create Adapters
+cpp
+Copy code
+#include <memory>
+#include <stdexcept>
+
+class ServiceFactory {
+public:
+    static std::unique_ptr<ThirdPartyService> createService(const Operation& operation) {
+        if (operation.serviceName == "OEPY") {
+            return std::make_unique<OeServiceAdapter>();
+        } else if (operation.serviceName == "XYZ") {
+            return std::make_unique<XyzServiceAdapter>();
+        } else {
+            throw std::invalid_argument("Unsupported service: " + operation.serviceName);
+        }
+    }
+};
+4. Main Application
+cpp
+Copy code
+void performOperation(ThirdPartyService* service, const std::string& functionName, const std::string& requestData) {
+    std::string response = service->execute(functionName, requestData);
+    std::cout << functionName << " Response: " << response << std::endl;
+}
+
+int main() {
+    // Example operations
+    Operation oeOperation("OEPY", "http://oe.host", "/oe/api");
+    Operation xyzOperation("XYZ", "http://xyz.host", "/xyz/api");
+
+    try {
+        auto oeService = ServiceFactory::createService(oeOperation);
+        std::cout << "Performing operations using OEPY Service:" << std::endl;
+        performOperation(oeService.get(), "create", "Create Request Data");
+        performOperation(oeService.get(), "read", "Read Request Data");
+        performOperation(oeService.get(), "newFunction", "New Function Request Data");
+
+        auto xyzService = ServiceFactory::createService(xyzOperation);
+        std::cout << "\nPerforming operations using XYZ Service:" << std::endl;
+        performOperation(xyzService.get(), "create", "Create Request Data");
+        performOperation(xyzService.get(), "read", "Read Request Data");
+        performOperation(xyzService.get(), "newFunction", "New Function Request Data");
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+
+    return 0;
+}*/
 /*#include <string>
 
 class Operation {

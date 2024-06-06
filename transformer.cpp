@@ -1,5 +1,191 @@
+/**/
+/*#include <string>
 
-/*
+class Operation {
+public:
+    std::string serviceName;
+    std::string host;
+    std::string url;
+
+    Operation(const std::string& serviceName, const std::string& host, const std::string& url)
+        : serviceName(serviceName), host(host), url(url) {}
+};
+2. Define Common Interfaces
+cpp
+Copy code
+class ThirdPartyService {
+public:
+    virtual ~ThirdPartyService() = default;
+    virtual std::string create(const std::string& request) = 0;
+    virtual std::string read(const std::string& request) = 0;
+    virtual std::string update(const std::string& request) = 0;
+    virtual std::string deleteOp(const std::string& request) = 0;
+};
+3. Create Adapters for Each Third-Party Application
+OEPY Adapter
+cpp
+Copy code
+struct OeMsg {
+    std::string data;
+};
+
+class OeService {
+public:
+    std::string create(const OeMsg& oeMsg) {
+        return "OEPY created: " + oeMsg.data;
+    }
+
+    std::string read(const OeMsg& oeMsg) {
+        return "OEPY read: " + oeMsg.data;
+    }
+
+    std::string update(const OeMsg& oeMsg) {
+        return "OEPY updated: " + oeMsg.data;
+    }
+
+    std::string deleteOp(const OeMsg& oeMsg) {
+        return "OEPY deleted: " + oeMsg.data;
+    }
+};
+
+class OeServiceAdapter : public ThirdPartyService {
+private:
+    OeService oeService;
+
+    OeMsg convertToOeMsg(const std::string& request) {
+        return { request };
+    }
+
+public:
+    std::string create(const std::string& request) override {
+        OeMsg oeMsg = convertToOeMsg(request);
+        return oeService.create(oeMsg);
+    }
+
+    std::string read(const std::string& request) override {
+        OeMsg oeMsg = convertToOeMsg(request);
+        return oeService.read(oeMsg);
+    }
+
+    std::string update(const std::string& request) override {
+        OeMsg oeMsg = convertToOeMsg(request);
+        return oeService.update(oeMsg);
+    }
+
+    std::string deleteOp(const std::string& request) override {
+        OeMsg oeMsg = convertToOeMsg(request);
+        return oeService.deleteOp(oeMsg);
+    }
+};
+XYZ Adapter
+cpp
+Copy code
+struct XyzMsg {
+    std::string data;
+};
+
+class XyzService {
+public:
+    std::string create(const XyzMsg& xyzMsg) {
+        return "XYZ created: " + xyzMsg.data;
+    }
+
+    std::string read(const XyzMsg& xyzMsg) {
+        return "XYZ read: " + xyzMsg.data;
+    }
+
+    std::string update(const XyzMsg& xyzMsg) {
+        return "XYZ updated: " + xyzMsg.data;
+    }
+
+    std::string deleteOp(const XyzMsg& xyzMsg) {
+        return "XYZ deleted: " + xyzMsg.data;
+    }
+};
+
+class XyzServiceAdapter : public ThirdPartyService {
+private:
+    XyzService xyzService;
+
+    XyzMsg convertToXyzMsg(const std::string& request) {
+        return { request };
+    }
+
+public:
+    std::string create(const std::string& request) override {
+        XyzMsg xyzMsg = convertToXyzMsg(request);
+        return xyzService.create(xyzMsg);
+    }
+
+    std::string read(const std::string& request) override {
+        XyzMsg xyzMsg = convertToXyzMsg(request);
+        return xyzService.read(xyzMsg);
+    }
+
+    std::string update(const std::string& request) override {
+        XyzMsg xyzMsg = convertToXyzMsg(request);
+        return xyzService.update(xyzMsg);
+    }
+
+    std::string deleteOp(const std::string& request) override {
+        XyzMsg xyzMsg = convertToXyzMsg(request);
+        return xyzService.deleteOp(xyzMsg);
+    }
+};
+4. Factory to Create Adapters
+cpp
+Copy code
+#include <memory>
+#include <stdexcept>
+
+class ServiceFactory {
+public:
+    static std::unique_ptr<ThirdPartyService> createService(const Operation& operation) {
+        if (operation.serviceName == "OEPY") {
+            return std::make_unique<OeServiceAdapter>();
+        } else if (operation.serviceName == "XYZ") {
+            return std::make_unique<XyzServiceAdapter>();
+        } else {
+            throw std::invalid_argument("Unsupported service: " + operation.serviceName);
+        }
+    }
+};
+5. Main Application
+cpp
+Copy code
+void performCRUD(ThirdPartyService* service) {
+    std::string createResponse = service->create("Create Request Data");
+    std::cout << "Create Response: " << createResponse << std::endl;
+
+    std::string readResponse = service->read("Read Request Data");
+    std::cout << "Read Response: " << readResponse << std::endl;
+
+    std::string updateResponse = service->update("Update Request Data");
+    std::cout << "Update Response: " << updateResponse << std::endl;
+
+    std::string deleteResponse = service->deleteOp("Delete Request Data");
+    std::cout << "Delete Response: " << deleteResponse << std::endl;
+}
+
+int main() {
+    // Example operations
+    Operation oeOperation("OEPY", "http://oe.host", "/oe/api");
+    Operation xyzOperation("XYZ", "http://xyz.host", "/xyz/api");
+
+    try {
+        auto oeService = ServiceFactory::createService(oeOperation);
+        std::cout << "Performing CRUD operations using OEPY Service:" << std::endl;
+        performCRUD(oeService.get());
+
+        auto xyzService = ServiceFactory::createService(xyzOperation);
+        std::cout << "\nPerforming CRUD operations using XYZ Service:" << std::endl;
+        performCRUD(xyzService.get());
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+
+    return 0;
+}
 Define the Target Interface for the Services:
 
 cpp

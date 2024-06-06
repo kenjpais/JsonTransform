@@ -1,4 +1,199 @@
-/*#include <functional>
+/*1. Define the Operation Class
+cpp
+Copy code
+#include <string>
+
+class Operation {
+public:
+    std::string serviceName;
+    std::string operationName;
+    std::string url;
+
+    Operation(const std::string& serviceName, const std::string& operationName, const std::string& url)
+        : serviceName(serviceName), operationName(operationName), url(url) {}
+};
+2. Define a Base Service Interface
+cpp
+Copy code
+#include <string>
+
+class ServiceInterface {
+public:
+    virtual ~ServiceInterface() = default;
+    virtual std::string execute(const Operation& operation, const std::string& request) = 0;
+};
+3. Implement Adapters for Each Third-Party Application
+OEPY Adapter
+cpp
+Copy code
+#include <string>
+#include <unordered_map>
+#include <functional>
+#include <stdexcept>
+
+struct OeMsg {
+    std::string data;
+};
+
+class OeService {
+public:
+    std::string create(const Operation& operation, const OeMsg& oeMsg) {
+        return "OEPY created at " + operation.url + ": " + oeMsg.data;
+    }
+
+    std::string read(const Operation& operation, const OeMsg& oeMsg) {
+        return "OEPY read at " + operation.url + ": " + oeMsg.data;
+    }
+
+    std::string newFunction(const Operation& operation, const OeMsg& oeMsg) {
+        return "OEPY new function at " + operation.url + ": " + oeMsg.data;
+    }
+};
+
+class OeAdapter : public ServiceInterface {
+private:
+    OeService oeService;
+    std::unordered_map<std::string, std::function<std::string(const Operation&, const OeMsg&)>> functionMap;
+
+    OeMsg convertToOeMsg(const std::string& request) {
+        return { request };
+    }
+
+public:
+    OeAdapter() {
+        functionMap["create"] = [this](const Operation& operation, const OeMsg& oeMsg) {
+            return this->oeService.create(operation, oeMsg);
+        };
+        functionMap["read"] = [this](const Operation& operation, const OeMsg& oeMsg) {
+            return this->oeService.read(operation, oeMsg);
+        };
+        functionMap["newFunction"] = [this](const Operation& operation, const OeMsg& oeMsg) {
+            return this->oeService.newFunction(operation, oeMsg);
+        };
+    }
+
+    std::string execute(const Operation& operation, const std::string& request) override {
+        OeMsg oeMsg = convertToOeMsg(request);
+        if (functionMap.find(operation.operationName) != functionMap.end()) {
+            return functionMap[operation.operationName](operation, oeMsg);
+        } else {
+            throw std::invalid_argument("Unsupported operation: " + operation.operationName);
+        }
+    }
+};
+XYZ Adapter
+cpp
+Copy code
+#include <string>
+#include <unordered_map>
+#include <functional>
+#include <stdexcept>
+
+struct XyzMsg {
+    std::string data;
+};
+
+class XyzService {
+public:
+    std::string create(const Operation& operation, const XyzMsg& xyzMsg) {
+        return "XYZ created at " + operation.url + ": " + xyzMsg.data;
+    }
+
+    std::string read(const Operation& operation, const XyzMsg& xyzMsg) {
+        return "XYZ read at " + operation.url + ": " + xyzMsg.data;
+    }
+
+    std::string newFunction(const Operation& operation, const XyzMsg& xyzMsg) {
+        return "XYZ new function at " + operation.url + ": " + xyzMsg.data;
+    }
+};
+
+class XyzAdapter : public ServiceInterface {
+private:
+    XyzService xyzService;
+    std::unordered_map<std::string, std::function<std::string(const Operation&, const XyzMsg&)>> functionMap;
+
+    XyzMsg convertToXyzMsg(const std::string& request) {
+        return { request };
+    }
+
+public:
+    XyzAdapter() {
+        functionMap["create"] = [this](const Operation& operation, const XyzMsg& xyzMsg) {
+            return this->xyzService.create(operation, xyzMsg);
+        };
+        functionMap["read"] = [this](const Operation& operation, const XyzMsg& xyzMsg) {
+            return this->xyzService.read(operation, xyzMsg);
+        };
+        functionMap["newFunction"] = [this](const Operation& operation, const XyzMsg& xyzMsg) {
+            return this->xyzService.newFunction(operation, xyzMsg);
+        };
+    }
+
+    std::string execute(const Operation& operation, const std::string& request) override {
+        XyzMsg xyzMsg = convertToXyzMsg(request);
+        if (functionMap.find(operation.operationName) != functionMap.end()) {
+            return functionMap[operation.operationName](operation, xyzMsg);
+        } else {
+            throw std::invalid_argument("Unsupported operation: " + operation.operationName);
+        }
+    }
+};
+4. Factory to Create Adapters
+cpp
+Copy code
+#include <memory>
+#include <stdexcept>
+
+class ServiceFactory {
+public:
+    static std::unique_ptr<ServiceInterface> createService(const std::string& serviceName) {
+        if (serviceName == "OEPY") {
+            return std::make_unique<OeAdapter>();
+        } else if (serviceName == "XYZ") {
+            return std::make_unique<XyzAdapter>();
+        } else {
+            throw std::invalid_argument("Unsupported service: " + serviceName);
+        }
+    }
+};
+5. Main Application
+cpp
+Copy code
+#include <iostream>
+
+void performOperation(ServiceInterface* service, const Operation& operation, const std::string& requestData) {
+    std::string response = service->execute(operation, requestData);
+    std::cout << operation.operationName << " Response: " << response << std::endl;
+}
+
+int main() {
+    try {
+        Operation oeCreateOperation("OEPY", "create", "http://oe.host/oe/api/create");
+        Operation oeReadOperation("OEPY", "read", "http://oe.host/oe/api/read");
+        Operation oeNewFunctionOperation("OEPY", "newFunction", "http://oe.host/oe/api/newFunction");
+
+        auto oeService = ServiceFactory::createService(oeCreateOperation.serviceName);
+        std::cout << "Performing operations using OEPY Service:" << std::endl;
+        performOperation(oeService.get(), oeCreateOperation, "Create Request Data");
+        performOperation(oeService.get(), oeReadOperation, "Read Request Data");
+        performOperation(oeService.get(), oeNewFunctionOperation, "New Function Request Data");
+
+        Operation xyzCreateOperation("XYZ", "create", "http://xyz.host/xyz/api/create");
+        Operation xyzReadOperation("XYZ", "read", "http://xyz.host/xyz/api/read");
+        Operation xyzNewFunctionOperation("XYZ", "newFunction", "http://xyz.host/xyz/api/newFunction");
+
+        auto xyzService = ServiceFactory::createService(xyzCreateOperation.serviceName);
+        std::cout << "\nPerforming operations using XYZ Service:" << std::endl;
+        performOperation(xyzService.get(), xyzCreateOperation, "Create Request Data");
+        performOperation(xyzService.get(), xyzReadOperation, "Read Request Data");
+        performOperation(xyzService.get(), xyzNewFunctionOperation, "New Function Request Data");
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+
+    return 0;
+}*/*#include <functional>
 #include <unordered_map>
 #include <string>
 

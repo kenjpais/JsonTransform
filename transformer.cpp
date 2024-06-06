@@ -1,4 +1,164 @@
-#include "json_pack.hpp"
+
+/*
+Define the Target Interface for the Services:
+
+cpp
+Copy code
+// Target.h
+#ifndef TARGET_H
+#define TARGET_H
+
+#include <string>
+
+class Target {
+public:
+    virtual ~Target() = default;
+    virtual std::string createStandingInstruction(const std::string& data) const = 0;
+    virtual std::string createMandate(const std::string& data) const = 0;
+    virtual std::string createPayment(const std::string& data) const = 0;
+};
+
+#endif // TARGET_H
+Define the Adaptees for ABC and XYZ Services:
+
+cpp
+Copy code
+// ABCService.h
+#ifndef ABC_SERVICE_H
+#define ABC_SERVICE_H
+
+#include <string>
+
+class ABCService {
+public:
+    std::string createABCStandingInstruction(const std::string& data) const {
+        return "ABC Standing Instruction: " + data;
+    }
+    std::string createABCMandate(const std::string& data) const {
+        return "ABC Mandate: " + data;
+    }
+    std::string createABCPayment(const std::string& data) const {
+        return "ABC Payment: " + data;
+    }
+};
+
+#endif // ABC_SERVICE_H
+cpp
+Copy code
+// XYZService.h
+#ifndef XYZ_SERVICE_H
+#define XYZ_SERVICE_H
+
+#include <string>
+
+class XYZService {
+public:
+    std::string createXYZStandingInstruction(const std::string& data) const {
+        return "XYZ Standing Instruction: " + data;
+    }
+    std::string createXYZMandate(const std::string& data) const {
+        return "XYZ Mandate: " + data;
+    }
+    std::string createXYZPayment(const std::string& data) const {
+        return "XYZ Payment: " + data;
+    }
+};
+
+#endif // XYZ_SERVICE_H
+Implement the Adapters:
+
+cpp
+Copy code
+// ABCAdapter.h
+#ifndef ABC_ADAPTER_H
+#define ABC_ADAPTER_H
+
+#include "Target.h"
+#include "ABCService.h"
+
+class ABCAdapter : public Target {
+private:
+    ABCService *abcService;
+
+public:
+    ABCAdapter(ABCService *service) : abcService(service) {}
+    
+    std::string createStandingInstruction(const std::string& data) const override {
+        return abcService->createABCStandingInstruction(data);
+    }
+
+    std::string createMandate(const std::string& data) const override {
+        return abcService->createABCMandate(data);
+    }
+
+    std::string createPayment(const std::string& data) const override {
+        return abcService->createABCPayment(data);
+    }
+};
+
+#endif // ABC_ADAPTER_H
+cpp
+Copy code
+// XYZAdapter.h
+#ifndef XYZ_ADAPTER_H
+#define XYZ_ADAPTER_H
+
+#include "Target.h"
+#include "XYZService.h"
+
+class XYZAdapter : public Target {
+private:
+    XYZService *xyzService;
+
+public:
+    XYZAdapter(XYZService *service) : xyzService(service) {}
+
+    std::string createStandingInstruction(const std::string& data) const override {
+        return xyzService->createXYZStandingInstruction(data);
+    }
+
+    std::string createMandate(const std::string& data) const override {
+        return xyzService->createXYZMandate(data);
+    }
+
+    std::string createPayment(const std::string& data) const override {
+        return xyzService->createXYZPayment(data);
+    }
+};
+
+#endif // XYZ_ADAPTER_H
+Main Application:
+
+cpp
+Copy code
+// main.cpp
+#include "Target.h"
+#include "ABCAdapter.h"
+#include "XYZAdapter.h"
+#include <iostream>
+
+void ClientCode(const Target *service) {
+    std::cout << service->createStandingInstruction("Standing Instruction Data") << std::endl;
+    std::cout << service->createMandate("Mandate Data") << std::endl;
+    std::cout << service->createPayment("Payment Data") << std::endl;
+}
+
+int main() {
+    ABCService abcService;
+    XYZService xyzService;
+
+    ABCAdapter abcAdapter(&abcService);
+    XYZAdapter xyzAdapter(&xyzService);
+
+    std::cout << "Client: Using ABC service via ABCAdapter:\n";
+    ClientCode(&abcAdapter);
+    std::cout << "\n";
+
+    std::cout << "Client: Using XYZ service via XYZAdapter:\n";
+    ClientCode(&xyzAdapter);
+
+    return 0;
+}*/#include "json_pack.hpp"
 #include <string>
 #include <unordered_map>
 #include <iostream>
